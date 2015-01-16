@@ -1,0 +1,25 @@
+var fs = require('fs');
+
+exports.parse = function(content) {
+    var output = "";
+    console.log("Beginning parse.");
+
+    var cursor = 0;
+    if (content.indexOf("$INCLUDE$", cursor) >= 0) {
+        cursor = content.indexOf("$INCLUDE$", cursor);
+        console.log("matched include at cursor: " + cursor);
+
+        var start_point = cursor;
+        var end_point = content.indexOf("$", cursor + 9) + 1;
+        console.log('mid: ' + content.indexOf("$", cursor + 8));
+
+        console.log("start: " + start_point + ", end: " + end_point);
+
+        var buffer = fs.readFileSync(content.substr(start_point + 9, end_point - 1));
+        console.log(buffer.toString('utf8', 0, buffer.length));
+    }
+    output = content;
+
+    console.log("ending parse.");
+    return output;
+}
