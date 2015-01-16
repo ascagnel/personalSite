@@ -23,6 +23,21 @@ exports.parse = function(content, cursor) {
     } 
     console.log('Passed includes parsing, now starting on the rest of the directives.');
 
+    // TODO -- FOREACH directive
+    /*
+    if (content.indexOf('$FOREACH$', cursor) >= 0) {
+        cursor = content.indexOf('$FOREACH$', cursor);
+        console.log('matched foreach at cursor: ' + cursor);
+
+        var before = content.indexOf('$BEFORE$', cursor);
+        var parsed_before = module.exports.parse(content, before + 1);
+        console.log('parsed_before: ' + parsed_before);
+        return content;
+    }
+    */
+
+    // TODO -- IF-ELSE-DIRECTIVES 
+
     console.log('Starting variable parsing.');
     cursor = 0;
     while (content.indexOf('$VAR$', cursor) >= 0) {
@@ -44,18 +59,6 @@ exports.parse = function(content, cursor) {
         content = content.substring(0, cursor) + data[var_name] + content.substring(var_end_divider + 1);
         cursor = (content.substring(0, cursor) + data[var_name]).length;
     }
-
-    /*
-    if (content.indexOf('$FOREACH$', cursor) >= 0) {
-        cursor = content.indexOf('$FOREACH$', cursor);
-        console.log('matched foreach at cursor: ' + cursor);
-
-        var before = content.indexOf('$BEFORE$', cursor);
-        var parsed_before = module.exports.parse(content, before + 1);
-        console.log('parsed_before: ' + parsed_before);
-        return content;
-    }
-    */
 
     console.log('Matched nothing on this parse attempt, leaving');
     return content;
