@@ -47,6 +47,7 @@ http.createServer(function (req,res) {
         res.writeHead(err_code, {'Content-Type':'text/html', 'Content-length':content.length});
         res.write(parser.parse(content));
         res.end();
+        console.log('Finished request.');
     });
 }).listen(port);
 
