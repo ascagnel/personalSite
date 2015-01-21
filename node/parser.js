@@ -1,7 +1,8 @@
 var fs = require('fs');
 
+var stack = [];
+
 exports.parse = function(content, cursor) {
-    var stack;
 
     if (cursor === undefined) {
         console.log('skipping parse of undefined cursor');
@@ -77,9 +78,7 @@ exports.parse = function(content, cursor) {
                 content.substring(0, begin_start) + content.substring(begin_end, content.length),
                 begin_start);
 
-        // loop goes here
-
-        var after_start = content.indexOf('$AFTER$');
+        var after_start = content.indexOf('$AFTER$', cursor);
         var after_end = content.indexOf('$', after_start + 1) + 1;
         var after = content.substring(after_start, after_end);
 
@@ -87,12 +86,27 @@ exports.parse = function(content, cursor) {
                     'after_end: ' + after_end + ', ' +
                     'after: \'' + after + '\' ');
 
+        // loop goes here
+        var data_source = ('data/' + data_source_filename + '.json').toString();
+        var data = JSON.parse(fs.readFileSync(data_source, 'utf8'));
+
+        var invariant = data[data_array];
+
+        for (element in invariant) {
+            stack.push(data[data_array][element]);
+            content = module.exports.parse(
+                    content.substring(0, end_start), 
+                    begin_end) +
+                content.substring(after_start, content.length);
+            stack.pop();
+        }
+
         content = module.exports.parse(
                 content.substring(0, after_start) + content.substring(after_end, content.length),
                 after_end);
 
 
-        var end_start = content.indexOf('$END$');
+        var end_start = content.indexOf('$ENDFOREACH$');
         var end_end = content.indexOf('$', end_start + 1) + 1;
         var end = content.substring(end_start, end_end);
 
@@ -108,6 +122,7 @@ exports.parse = function(content, cursor) {
 
     // TODO -- IF-ELSE-DIRECTIVES 
 
+    // TODO -- Needs to read from stack as well as data file
     console.log('Starting variable parsing.');
     cursor = 0;
     while (content.indexOf('$VAR$', cursor) >= 0) {
@@ -116,24 +131,38 @@ exports.parse = function(content, cursor) {
         var source_start_divider = cursor + 4;
         var source_end_divider = content.indexOf('$', cursor + 5);
 
-        var source_file_name = content.substr(source_start_divider + 1, (source_end_divider-source_start_divider-1));
+        var source_name = content.substr(source_start_divider + 1, (source_end_divider-source_start_divider-1));
 
         var var_start_divider = source_end_divider;
         var var_end_divider = content.indexOf('$', var_start_divider + 1);
 
         var var_name = content.substr(var_start_divider + 1, (var_end_divider - var_start_divider - 1));
+        var value = undefined;
 
-        var source_file = 'data/' + source_file_name + '.json';
-        console.log('reading from file: ' + source_file);
-        var data = JSON.parse(fs.readFileSync(source_file, 'utf8'));
+        if ((stack[stack.length - 1] !== undefined) && (stack[stack.length - 1][var_name] !== undefined)) {
+            value = stack[stack.length - 1][var_name];
+        } else {
+            var source_file = 'data/' + source_name + '.json';
+            console.log('reading from file: ' + source_file);
+            var data = JSON.parse(fs.readFileSync(source_file, 'utf8'));
 
-        if (data[var_name] === undefined) {
+            if (data[var_name] === undefined) {
+                console.log('Skipping undefined variable \'' + var_name + '\'.');
+                cursor =  var_end_divider;
+            } else {
+                console.log('Replacing \'' + content.substring(cursor, var_end_divider + 1) + '\' with \'' +  data[var_name] + '\'.');
+                value = data[var_name];
+            }
+        }
+
+        console.log('value: ' + value);
+
+        if (value === undefined) {
             console.log('Skipping undefined variable \'' + var_name + '\'.');
             cursor =  var_end_divider;
         } else {
-            console.log('Replacing \'' + content.substring(cursor, var_end_divider + 1) + '\' with \'' +  data[var_name] + '\'.');
-            content = content.substring(0, cursor) + data[var_name] + content.substring(var_end_divider + 1);
-            cursor = (content.substring(0, cursor) + data[var_name]).length;
+            content = content.substring(0, cursor) + value + content.substring(var_end_divider + 1);
+            cursor = (content.substring(0, cursor) + value).length;
         }
     }
 
