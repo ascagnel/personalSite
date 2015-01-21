@@ -1,6 +1,8 @@
 var fs = require('fs');
 
 exports.parse = function(content, cursor) {
+    var stack;
+
     if (cursor === undefined) {
         console.log('skipping parse of undefined cursor');
         return content;
@@ -26,13 +28,14 @@ exports.parse = function(content, cursor) {
     // TODO -- FOREACH directive
     if (content.indexOf('$FOREACH$', cursor) >= 0) {
         cursor = content.indexOf('$FOREACH$', cursor);
-        console.log('matched foreach at cursor: ' + cursor);
+        console.log('Matched $FORACH$ at cursor: ' + cursor + '.');
 
         var foreach_header_start = cursor;
 
         var data_array_start = content.indexOf('$', cursor + 1) + 1;
         var data_array_end = content.indexOf('$', data_array_start);
         var data_array = content.substring(data_array_start, data_array_end);
+
         console.log('data_array: \'' + data_array + '\', ' + 
                     'data_array_start: ' + data_array_start, ', ' +
                     'data_array_end: ' + data_array_end);
@@ -49,9 +52,7 @@ exports.parse = function(content, cursor) {
         var foreach_header_end = data_source_end + 1;
 
         console.log('foreach_header_start: ' + foreach_header_start + ', ' +
-                    'foreach_heard_end: ' + foreach_header_end);
-
-        console.log(content[foreach_header_end-1]);
+                    'foreach_header_end: ' + foreach_header_end);
 
         var before_start = content.indexOf('$BEFORE$', 
                                            foreach_header_end + 1);
@@ -59,14 +60,50 @@ exports.parse = function(content, cursor) {
 
         console.log('before_start: ' + before_start + ', ' +
                     'before_end: ' + before_end);
-        var parsed_before = module.exports.parse(content, before_end + 1);
-        console.log(parsed_before);
 
-        var begin_start = parsed_before.indexOf('$BEGIN$', before_end);
-        console.log('begin_start: ' + begin_start);
+        content = module.exports.parse(
+                content.substring(0,foreach_header_start) + content.substring(before_end + 1, content.length),
+                before_start);
+
+        var begin_start = content.indexOf('$BEGIN$');
+        var begin_end = content.indexOf('$', begin_start + 1) + 1;
+        var begin = content.substring(begin_start, begin_end);
+
+        console.log('begin_start: ' + begin_start + ', ' + 
+                    'begin_end: ' + begin_end + ', ' + 
+                    'begin: \'' + begin + '\' ');
+
+        content = module.exports.parse(
+                content.substring(0, begin_start) + content.substring(begin_end, content.length),
+                begin_start);
+
+        // loop goes here
+
+        var after_start = content.indexOf('$AFTER$');
+        var after_end = content.indexOf('$', after_start + 1) + 1;
+        var after = content.substring(after_start, after_end);
+
+        console.log('after_start: ' + after_start + ', ' + 
+                    'after_end: ' + after_end + ', ' +
+                    'after: \'' + after + '\' ');
+
+        content = module.exports.parse(
+                content.substring(0, after_start) + content.substring(after_end, content.length),
+                after_end);
+
+
+        var end_start = content.indexOf('$END$');
+        var end_end = content.indexOf('$', end_start + 1) + 1;
+        var end = content.substring(end_start, end_end);
+
+        console.log('end_start: ' + end_start + ', ' + 
+                    'end_end: ' + end_end + ', ' +
+                    'end: \'' + end + '\' ');
+
+        content = content.substring(0, end_start), content.substring(end_end, content.length);
 
         console.log('Finished parsing $FOREACH$ loop.');
-        return parsed_before;
+        return content;
     }
 
     // TODO -- IF-ELSE-DIRECTIVES 
@@ -89,10 +126,15 @@ exports.parse = function(content, cursor) {
         var source_file = 'data/' + source_file_name + '.json';
         console.log('reading from file: ' + source_file);
         var data = JSON.parse(fs.readFileSync(source_file, 'utf8'));
-        console.log('Replacing \'' + content.substring(cursor, var_end_divider + 1) + '\' with \'' +  data[var_name] + '\'.');
 
-        content = content.substring(0, cursor) + data[var_name] + content.substring(var_end_divider + 1);
-        cursor = (content.substring(0, cursor) + data[var_name]).length;
+        if (data[var_name] === undefined) {
+            console.log('Skipping undefined variable \'' + var_name + '\'.');
+            cursor =  var_end_divider;
+        } else {
+            console.log('Replacing \'' + content.substring(cursor, var_end_divider + 1) + '\' with \'' +  data[var_name] + '\'.');
+            content = content.substring(0, cursor) + data[var_name] + content.substring(var_end_divider + 1);
+            cursor = (content.substring(0, cursor) + data[var_name]).length;
+        }
     }
 
     console.log('Matched nothing on this parse attempt, leaving');
