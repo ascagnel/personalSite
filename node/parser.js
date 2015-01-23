@@ -146,7 +146,6 @@ exports.parse = function(content, cursor) {
 
     // TODO -- IF-ELSE-DIRECTIVES 
 
-    // TODO -- Needs to read from stack as well as data file
     logger.log().logDebug('Starting variable parsing.');
     cursor = 0;
     while (content.indexOf('$VAR$', cursor) >= 0) {

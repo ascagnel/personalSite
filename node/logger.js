@@ -23,7 +23,7 @@ exports.log = function() {
         exports.log.logLevel = levels['INFO'];
     }
     if (exports.log.logPrefix === undefined) {
-        exports.log.logPrefix = '%d-%m-%y %H:%M:%S %L: ';
+        exports.log.logPrefix = '[%d-%m-%y][%H:%M:%S][%L] ';
     }
 
     function parsePrefix(level) {
