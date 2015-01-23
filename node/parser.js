@@ -78,6 +78,7 @@ exports.parse = function(content, cursor) {
                 content.substring(0, begin_start) + content.substring(begin_end, content.length),
                 begin_start);
 
+        cursor = begin_end;
         var after_start = content.indexOf('$AFTER$', cursor);
         var after_end = content.indexOf('$', after_start + 1) + 1;
         var after = content.substring(after_start, after_end);
@@ -90,15 +91,36 @@ exports.parse = function(content, cursor) {
         var data_source = ('data/' + data_source_filename + '.json').toString();
         var data = JSON.parse(fs.readFileSync(data_source, 'utf8'));
 
+        var repeated_string = content.substring(begin_start, after_start);
         var invariant = data[data_array];
 
-        for (element in invariant) {
-            stack.push(data[data_array][element]);
-            content = module.exports.parse(
-                    content.substring(0, end_start), 
-                    begin_end) +
+        var before_loop_contents = content.substring(0);
+        var loop_cursor = 0;
+
+        console.log('invariant size: ' + invariant.length);
+        for (var i = 0; i < invariant.length; i++) {
+            var element = invariant[i];
+            console.log('element: ' + element);
+
+            stack.push(element);
+
+            if ((i+1) == invariant.length) {
+                console.log('=====\thit on element number \'' + i + '\'.');
+                repeated_string = '';
+            }
+            
+            content = 
+                module.exports.parse(
+                    content.substring(0, after_start), begin_end) +
+                repeated_string + 
                 content.substring(after_start, content.length);
+
             stack.pop();
+
+            after_start = content.indexOf('$AFTER$', cursor);
+            after_end = content.indexOf('$', after_start + 1) + 1;
+            after = content.substring(after_start, after_end);
+            console.log('content for \'' + element + '\':' + content);
         }
 
         content = module.exports.parse(
