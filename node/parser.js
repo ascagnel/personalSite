@@ -1,13 +1,16 @@
 var fs = require('fs');
+var logger = require('./logger');
 
 var stack = [];
 
 exports.parse = function(content, cursor) {
 
     if (cursor === undefined) {
-        console.log('skipping parse of undefined cursor');
+        logger.log().logDebug('skipping parse of undefined cursor');
         return content;
     }
+
+    logger.log().logInfo('Starting parse at cursor \'' + cursor + '\'');
 
     if (content.indexOf('$INCLUDE$', cursor) >= 0) {
         cursor = content.indexOf('$INCLUDE$', cursor);
@@ -17,19 +20,19 @@ exports.parse = function(content, cursor) {
         var mid_point = content.indexOf('$', cursor + 8);
 
         var filename = content.substring((start_point + 9), (end_point - 1));
-        console.log('Including template \'' + filename + '\' for parsing.');
+        logger.log().logDebug('Including template \'' + filename + '\' for parsing.');
         
         var buffer = fs.readFileSync(filename);
         var included_content = module.exports.parse(buffer.toString('utf8', 0, buffer.length),0);
         content = content.substring(0, start_point) + included_content + content.substring(end_point);
-        console.log('Passed includes parsing, now starting on the rest of the directives.');
+        logger.log().logDebug('Passed includes parsing, now starting on the rest of the directives.');
         return module.exports.parse(content, 0);
     } 
 
     // TODO -- FOREACH directive
     if (content.indexOf('$FOREACH$', cursor) >= 0) {
         cursor = content.indexOf('$FOREACH$', cursor);
-        console.log('Matched $FORACH$ at cursor: ' + cursor + '.');
+        logger.log().logDebug('Matched $FORACH$ at cursor: ' + cursor + '.');
 
         var foreach_header_start = cursor;
 
@@ -37,7 +40,7 @@ exports.parse = function(content, cursor) {
         var data_array_end = content.indexOf('$', data_array_start);
         var data_array = content.substring(data_array_start, data_array_end);
 
-        console.log('data_array: \'' + data_array + '\', ' + 
+        logger.log().logTrace('data_array: \'' + data_array + '\', ' + 
                     'data_array_start: ' + data_array_start, ', ' +
                     'data_array_end: ' + data_array_end);
 
@@ -46,20 +49,20 @@ exports.parse = function(content, cursor) {
         var data_source_filename = content.substring(data_source_start, 
                                                      data_source_end);
 
-        console.log('data_source_filename: \'' + data_source_filename + '\', ' + 
+        logger.log().logTrace('data_source_filename: \'' + data_source_filename + '\', ' + 
                     'data_source_start: ' + data_source_start + ', ' +
                     'data_source_end: ' + data_source_end);
 
         var foreach_header_end = data_source_end + 1;
 
-        console.log('foreach_header_start: ' + foreach_header_start + ', ' +
+        logger.log().logTrace('foreach_header_start: ' + foreach_header_start + ', ' +
                     'foreach_header_end: ' + foreach_header_end);
 
         var before_start = content.indexOf('$BEFORE$', 
                                            foreach_header_end + 1);
         var before_end = content.indexOf('$', before_start + 1);
 
-        console.log('before_start: ' + before_start + ', ' +
+        logger.log().logTrace('before_start: ' + before_start + ', ' +
                     'before_end: ' + before_end);
 
         content = module.exports.parse(
@@ -70,7 +73,7 @@ exports.parse = function(content, cursor) {
         var begin_end = content.indexOf('$', begin_start + 1) + 1;
         var begin = content.substring(begin_start, begin_end);
 
-        console.log('begin_start: ' + begin_start + ', ' + 
+        logger.log().logTrace('begin_start: ' + begin_start + ', ' + 
                     'begin_end: ' + begin_end + ', ' + 
                     'begin: \'' + begin + '\' ');
 
@@ -83,7 +86,7 @@ exports.parse = function(content, cursor) {
         var after_end = content.indexOf('$', after_start + 1) + 1;
         var after = content.substring(after_start, after_end);
 
-        console.log('after_start: ' + after_start + ', ' + 
+        logger.log().logTrace('after_start: ' + after_start + ', ' + 
                     'after_end: ' + after_end + ', ' +
                     'after: \'' + after + '\' ');
 
@@ -97,15 +100,15 @@ exports.parse = function(content, cursor) {
         var before_loop_contents = content.substring(0);
         var loop_cursor = 0;
 
-        console.log('invariant size: ' + invariant.length);
+        logger.log().logTrace('invariant size: ' + invariant.length);
         for (var i = 0; i < invariant.length; i++) {
             var element = invariant[i];
-            console.log('element: ' + element);
+            logger.log().logTrace('element: ' + element);
 
             stack.push(element);
 
             if ((i+1) == invariant.length) {
-                console.log('=====\thit on element number \'' + i + '\'.');
+                logger.log().logTrace('=====\thit on element number \'' + i + '\'.');
                 repeated_string = '';
             }
             
@@ -120,7 +123,7 @@ exports.parse = function(content, cursor) {
             after_start = content.indexOf('$AFTER$', cursor);
             after_end = content.indexOf('$', after_start + 1) + 1;
             after = content.substring(after_start, after_end);
-            console.log('content for \'' + element + '\':' + content);
+            logger.log().logTrace('content for \'' + element + '\':' + content);
         }
 
         content = module.exports.parse(
@@ -132,20 +135,20 @@ exports.parse = function(content, cursor) {
         var end_end = content.indexOf('$', end_start + 1) + 1;
         var end = content.substring(end_start, end_end);
 
-        console.log('end_start: ' + end_start + ', ' + 
+        logger.log().logTrace('end_start: ' + end_start + ', ' + 
                     'end_end: ' + end_end + ', ' +
                     'end: \'' + end + '\' ');
 
         content = content.substring(0, end_start), content.substring(end_end, content.length);
 
-        console.log('Finished parsing $FOREACH$ loop.');
+        logger.log().logDebug('Finished parsing $FOREACH$ loop.');
         return content;
     }
 
     // TODO -- IF-ELSE-DIRECTIVES 
 
     // TODO -- Needs to read from stack as well as data file
-    console.log('Starting variable parsing.');
+    logger.log().logDebug('Starting variable parsing.');
     cursor = 0;
     while (content.indexOf('$VAR$', cursor) >= 0) {
         cursor = content.indexOf('$VAR$', cursor);
@@ -165,22 +168,22 @@ exports.parse = function(content, cursor) {
             value = stack[stack.length - 1][var_name];
         } else {
             var source_file = 'data/' + source_name + '.json';
-            console.log('reading from file: ' + source_file);
+            logger.log().logTrace('reading from file: ' + source_file);
             var data = JSON.parse(fs.readFileSync(source_file, 'utf8'));
 
             if (data[var_name] === undefined) {
-                console.log('Skipping undefined variable \'' + var_name + '\'.');
+                logger.log().logTrace('Skipping undefined variable \'' + var_name + '\'.');
                 cursor =  var_end_divider;
             } else {
-                console.log('Replacing \'' + content.substring(cursor, var_end_divider + 1) + '\' with \'' +  data[var_name] + '\'.');
+                logger.log().logTrace('Replacing \'' + content.substring(cursor, var_end_divider + 1) + '\' with \'' +  data[var_name] + '\'.');
                 value = data[var_name];
             }
         }
 
-        console.log('value: ' + value);
+        logger.log().logTrace('value: ' + value);
 
         if (value === undefined) {
-            console.log('Skipping undefined variable \'' + var_name + '\'.');
+            logger.log().logTrace('Skipping undefined variable \'' + var_name + '\'.');
             cursor =  var_end_divider;
         } else {
             content = content.substring(0, cursor) + value + content.substring(var_end_divider + 1);
@@ -188,6 +191,6 @@ exports.parse = function(content, cursor) {
         }
     }
 
-    console.log('Matched nothing on this parse attempt, leaving');
+    logger.log().logInfo('Matched nothing on this parse attempt, leaving');
     return content;
 }
