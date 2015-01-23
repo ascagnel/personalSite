@@ -29,7 +29,6 @@ exports.parse = function(content, cursor) {
         return module.exports.parse(content, 0);
     } 
 
-    // TODO -- FOREACH directive
     if (content.indexOf('$FOREACH$', cursor) >= 0) {
         cursor = content.indexOf('$FOREACH$', cursor);
         logger.log().logDebug('Matched $FORACH$ at cursor: ' + cursor + '.');
